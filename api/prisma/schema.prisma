@@ -1,0 +1,190 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model user {
+  id                 Int               @id @default(autoincrement())
+  sub                String            @unique
+  name               String
+  given_name         String
+  family_name        String
+  email              String            @unique
+  photo              String
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @default(now()) @updatedAt
+  folder_id          String
+  refresh_token      String? //change
+  // Relación con otros modelos
+  courses_created    course[]          @relation("UserCreatedCourses")
+  announces_created  announce[]        @relation("UserCreatedAnnounces")
+  course_enrollments course_users[] // Relación con usuarios en cursos
+  task_created       task[]
+  task_submission    task_submission[]
+  comment_send       comment[]         @relation("CommentSender")
+  commend_receivied  comment[]         @relation("CommentReceivied")
+}
+
+model course {
+  id          Int      @id @default(autoincrement())
+  course_name String
+  creator_id  Int
+  code_class  String
+  description String
+  section     String
+  subject     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  // Relación con user
+  creator     user     @relation("UserCreatedCourses", fields: [creator_id], references: [id])
+
+  // Relación con course_users
+  enrolled_users course_users[]
+  announce       announce[]
+  task           task[]
+  topic          topic[]
+}
+
+model course_users {
+  id        Int      @id @default(autoincrement())
+  id_course Int
+  id_user   Int
+  role      String
+  createdAt DateTime @default(now())
+  folder_id String
+
+  user   user   @relation(fields: [id_user], references: [id])
+  course course @relation(fields: [id_course], references: [id])
+
+  @@unique([id_course, id_user]) // Asegura que un usuario no esté inscrito en el mismo curso más de una vez
+}
+
+model announce {
+  id         Int      @id @default(autoincrement())
+  creator_id Int
+  id_course  Int
+  text       String   @db.Text
+  createdAt  DateTime @default(now())
+
+  creator user   @relation("UserCreatedAnnounces", fields: [creator_id], references: [id])
+  course  course @relation(fields: [id_course], references: [id])
+
+  // Relación con announce_files
+  announce_files announce_files[]
+}
+
+model announce_files {
+  id            Int    @id @default(autoincrement())
+  id_announce   Int
+  url           String
+  thumbnailLink String
+  id_file       String
+  name          String
+  type          String
+
+  // Relación con announce
+  announce announce @relation(fields: [id_announce], references: [id])
+}
+
+model topic {
+  id        Int      @id @default(autoincrement())
+  id_course Int
+  name      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  course    course   @relation(fields: [id_course], references: [id])
+  task      task[]
+}
+
+model task {
+  id              Int       @id @default(autoincrement())
+  title           String
+  deadline        DateTime?
+  points          Int
+  id_course       Int
+  creator_id      Int
+  topic_id        Int?
+  lockSubmissions Boolean
+  instructions    String    @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  course  course @relation(fields: [id_course], references: [id])
+  creator user   @relation(fields: [creator_id], references: [id])
+  topic   topic? @relation(fields: [topic_id], references: [id])
+
+  comment         comment[]
+  task_submission task_submission[]
+  task_files      task_files[]
+}
+
+model task_files {
+  id            Int    @id @default(autoincrement())
+  id_task       Int
+  url           String
+  thumbnailLink String
+  id_file       String
+  name          String
+  type          String
+
+  // Relación con announce
+  task task @relation(fields: [id_task], references: [id])
+}
+
+model task_submission {
+  id         Int @id @default(autoincrement())
+  score      Int?
+  id_task    Int
+  id_creator Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  task                  task                    @relation(fields: [id_task], references: [id])
+  creator               user                    @relation(fields: [id_creator], references: [id])
+  task_submission_files task_submission_files[]
+}
+
+model task_submission_files {
+  id                 Int    @id @default(autoincrement())
+  id_task_submission Int
+  url                String
+  thumbnailLink      String
+  id_file            String
+  name               String
+  type               String
+
+  // Relación con announce
+  task_submission task_submission @relation(fields: [id_task_submission], references: [id])
+}
+
+model comment {
+  id           Int      @id @default(autoincrement())
+  text         String   @db.Text
+  id_creator   Int // ID del usuario que envía el mensaje
+  id_recipient Int? // ID del usuario que recibe el mensaje (opcional, solo para mensajes privados)
+  id_task      Int // ID de la tarea asociada al mensaje
+  is_private   Boolean // Indica si el mensaje es privado (true) o público (false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  // Relación con el usuario que envía el mensaje (creador)
+  sender user @relation("CommentSender", fields: [id_creator], references: [id])
+
+  // Relación con el usuario que recibe el mensaje (receptor, solo para mensajes privados)
+  recipient user? @relation("CommentReceivied", fields: [id_recipient], references: [id])
+
+  // Relación con la tarea asociada al mensaje
+  task task @relation(fields: [id_task], references: [id])
+}

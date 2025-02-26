@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-primary bg-white text-primary leading-loose;
+
+    .h1 {
+      @apply text-[32px] ;
+    }
+    .h2 {
+      @apply text-[22px] ;
+    }
+    .h3 {
+      @apply text-[16px];
+    }
+    .h4 {
+      @apply text-[13px];
+    }
+    .h5 {
+      @apply text-[15px];
+    }
+  }
+  :root {
+    --radius: 0.5rem;
+  }
+}
+
+@layer utilities {
+  .text-outline {
+    -webkit-text-stroke: 1px #ffffff;
+    color: transparent; /* Asegúrate de que el texto sea transparente */
+  }
+  .text-outline-hover {
+    -webkit-text-stroke: 1px #00ff99;
+    color: transparent;
+  }
+}
